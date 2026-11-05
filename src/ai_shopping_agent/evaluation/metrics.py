@@ -39,8 +39,38 @@ GATE_FILES = {
     ],
 }
 
+GATE_TESTS = {
+    "requirements_and_state": [
+        "tests/test_parser.py",
+        "tests/test_state_updates.py",
+        "tests/test_agent_workflow.py",
+    ],
+    "dynamic_tools": [
+        "tests/test_tool_registry.py",
+        "tests/test_dynamic_tools.py",
+        "tests/test_model_client.py",
+    ],
+    "validation_and_ranking": [
+        "tests/test_validation.py",
+        "tests/test_ranking.py",
+        "tests/test_agent_workflow.py",
+    ],
+    "resilience_and_auditability": [
+        "tests/test_error_recovery.py",
+        "tests/test_agent_workflow.py",
+    ],
+    "tests_and_documentation": [
+        "tests/test_evaluation.py",
+    ],
+}
 
-def score_gates(test_failures: int, test_total: int, root: Path = Path(".")) -> dict[str, Any]:
+
+def score_gates(
+    test_failures: int,
+    test_total: int,
+    root: Path = Path("."),
+    gate_test_results: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     scenario_count = 0
     catalog_count = 0
     try:
@@ -52,10 +82,24 @@ def score_gates(test_failures: int, test_total: int, root: Path = Path(".")) -> 
     gates: dict[str, Any] = {}
     for name, files in GATE_FILES.items():
         missing = [path for path in files if not (root / path).is_file()]
-        passed = test_total > 0 and test_failures == 0 and not missing
+        targeted = (gate_test_results or {}).get(name)
+        targeted_passed = (
+            targeted is None
+            or (
+                targeted.get("exit_code") == 0
+                and targeted.get("passed", 0) > 0
+                and targeted.get("failed", 0) == 0
+                and targeted.get("errors", 0) == 0
+            )
+        )
+        passed = test_total > 0 and test_failures == 0 and not missing and targeted_passed
         if name == "tests_and_documentation":
             passed = passed and scenario_count >= 30 and catalog_count >= 30
-        gates[name] = {"passed": passed, "missing_files": missing}
+        gates[name] = {
+            "passed": passed,
+            "missing_files": missing,
+            "targeted_tests": targeted,
+        }
     return {
         "score": sum(1 for gate in gates.values() if gate["passed"]),
         "maximum_score": 5,
