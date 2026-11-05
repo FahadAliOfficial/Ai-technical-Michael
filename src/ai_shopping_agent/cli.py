@@ -31,6 +31,13 @@ def main() -> None:
     recommendation = state.recommendation
     print(f"Mode: {agent.mode}")
     print(recommendation.message if recommendation else "The agent did not produce a result.")
+    if recommendation and recommendation.constraint_checks:
+        print("Mandatory checks:")
+        for check in recommendation.constraint_checks:
+            print(f"- {check}")
+    if recommendation and recommendation.comparison_summary:
+        print("Comparison:")
+        print(recommendation.comparison_summary)
     if recommendation and recommendation.alternatives:
         print("Alternatives:")
         for item in recommendation.alternatives:

@@ -69,6 +69,7 @@ class ShoppingAgent:
         self.logger.log("requirements_parsed", state.run_id, requirements=requirements.model_dump())
 
         if requirements.conflicts:
+            state.enter_phase("clarification")
             state.recommendation = Recommendation(
                 status="clarification",
                 message="I need one clarification before searching.",
@@ -82,6 +83,24 @@ class ShoppingAgent:
             )
             return state
 
+        missing = requirements.missing_mandatory()
+        if missing:
+            state.enter_phase("clarification")
+            question = requirements.question_for_missing()
+            state.recommendation = Recommendation(
+                status="clarification",
+                message="I need the missing mandatory requirements before searching.",
+                clarification_question=question,
+            )
+            self.logger.log(
+                "clarification_required",
+                state.run_id,
+                missing_requirements=missing,
+                question=question,
+            )
+            return state
+
+        state.enter_phase("searching")
         search_context = self._context(state, include_unavailable=True)
         search = self._safe_select("search the product catalog", search_context, state)
         if search is None:
@@ -96,6 +115,7 @@ class ShoppingAgent:
         if not state.candidate_ids:
             return self._no_match(state, "No products were returned by the available search tool.")
 
+        state.enter_phase("inspecting")
         details_tool = self._safe_select(
             "retrieve complete product details",
             self._context(state, product_id=state.candidate_ids[0]),
@@ -116,6 +136,7 @@ class ShoppingAgent:
                 state.rejected[product_id] = [f"Product details could not be verified: {exc}"]
                 self.logger.log("product_rejected", state.run_id, product_id=product_id, reasons=state.rejected[product_id])
 
+        state.enter_phase("validating")
         preliminary: list[Product] = []
         for product in state.products.values():
             result = validate_product(product, requirements)
@@ -137,6 +158,7 @@ class ShoppingAgent:
             return self._error(state, "Availability cannot be verified safely.")
 
         available: list[Product] = []
+        state.pending_checks = [f"availability:{product.product_id}" for product in preliminary]
         for product in preliminary:
             try:
                 arguments = self.adapter.bind(
@@ -149,6 +171,9 @@ class ShoppingAgent:
                 product.availability = None
                 state.errors.append(f"Availability check failed for {product.product_id}: {exc}")
             validation = validate_product(product, requirements)
+            check_name = f"availability:{product.product_id}"
+            if check_name in state.pending_checks:
+                state.pending_checks.remove(check_name)
             if validation.valid:
                 available.append(product)
             else:
@@ -157,15 +182,18 @@ class ShoppingAgent:
         if not available:
             return self._no_match(state, "No fully verified in-stock product satisfies every mandatory constraint.")
 
+        state.enter_phase("ranking")
         reviews = self._collect_reviews(state, available)
         initially_ranked = rank_products(available, requirements, reviews)
 
-        final_products = self._final_verification(state, [item.product for item in initially_ranked[:5]], requirements)
+        state.enter_phase("verifying")
+        final_products = self._final_verification(state, [item.product for item in initially_ranked], requirements)
         if not final_products:
             return self._no_match(state, "Candidates became invalid during final price or availability verification.")
 
         final_ranked = rank_products(final_products, requirements, reviews)
         compare_ids = [item.product.product_id for item in final_ranked[:3]]
+        comparison_summary: str | None = None
         if len(compare_ids) > 1:
             comparison = self._safe_select(
                 "compare selected products",
@@ -174,19 +202,73 @@ class ShoppingAgent:
             )
             if comparison:
                 try:
-                    self._call(state, *comparison)
+                    comparison_payload = self._call(state, *comparison)
+                    compared_names = [item.get("name", item.get("product_id", "unknown")) for item in comparison_payload.get("products", [])]
+                    comparison_summary = "Compared current specifications for: " + ", ".join(compared_names)
                 except ToolExecutionError as exc:
                     state.errors.append(f"Comparison tool failed; deterministic ranking retained: {exc}")
 
+        state.enter_phase("responding")
+        grounded_summary = self._model_comparison(state, final_ranked, requirements)
+        if grounded_summary:
+            comparison_summary = grounded_summary
         limitations = list(state.errors)
-        state.recommendation = success_response(final_ranked, limitations)
+        state.recommendation = success_response(final_ranked, requirements, limitations, comparison_summary)
         self.logger.log(
             "recommendation_created",
             state.run_id,
             product_id=state.recommendation.recommended.product.product_id,
             score=state.recommendation.recommended.score,
         )
+        state.enter_phase("completed")
         return state
+
+    def _model_comparison(
+        self,
+        state: AgentState,
+        ranked: list[Any],
+        requirements: Requirements,
+    ) -> str | None:
+        run_tool_loop = getattr(self.model, "run_tool_loop", None)
+        if run_tool_loop is None:
+            return None
+        comparison_tools = [
+            tool.as_openai_tool()
+            for tool in self.registry.list()
+            if tool.handler == "compare"
+        ]
+        if not comparison_tools:
+            return None
+        candidate_ids = [item.product.product_id for item in ranked[:3]]
+        prompt = (
+            "Compare these already validated candidates and explain why the first-ranked option is recommended, "
+            "including meaningful trade-offs for the alternatives. You must call the comparison tool before answering.\n"
+            f"Mandatory requirements: {requirements.model_dump_json()}\n"
+            f"Verified candidate IDs in deterministic rank order: {candidate_ids}"
+        )
+        try:
+            result = run_tool_loop(
+                prompt,
+                comparison_tools,
+                lambda name, arguments: self._call(state, name, arguments),
+                max_steps=6,
+            )
+        except Exception as exc:
+            state.errors.append(f"Model comparison failed; deterministic explanation retained: {exc}")
+            return None
+        if not result.calls:
+            state.errors.append("Model comparison returned without using a verification tool.")
+            return None
+        state.model_metrics = dict(getattr(self.model, "usage_totals", result.usage))
+        self.logger.log(
+            "model_tool_loop_completed",
+            state.run_id,
+            steps=result.steps,
+            calls=len(result.calls),
+            usage=result.usage,
+            request_ids=getattr(self.model, "request_ids", result.request_ids),
+        )
+        return result.final_text
 
     def _collect_reviews(self, state: AgentState, products: list[Product]) -> dict[str, ReviewSummary]:
         selected = self._safe_select(
@@ -219,6 +301,7 @@ class ShoppingAgent:
         details = self.registry.find("retrieve complete product details")
         availability = self.registry.find("verify product inventory availability")
         verified: list[Product] = []
+        state.pending_checks = [f"final_verification:{product.product_id}" for product in products]
         for prior in products:
             try:
                 detail_args = self.adapter.bind(details.parameters, self._context(state, product_id=prior.product_id))
@@ -242,6 +325,13 @@ class ShoppingAgent:
                     )
             except (ToolExecutionError, ValueError, LookupError) as exc:
                 state.rejected[prior.product_id] = [f"Final verification failed: {exc}"]
+            finally:
+                check_name = f"final_verification:{prior.product_id}"
+                if check_name in state.pending_checks:
+                    state.pending_checks.remove(check_name)
+            if len(verified) >= 3:
+                break
+        state.pending_checks.clear()
         return verified
 
     def _safe_select(
@@ -265,6 +355,8 @@ class ShoppingAgent:
         try:
             result, records = self.executor.call(tool_name, arguments)
         except ToolExecutionError as exc:
+            for record in exc.records:
+                record.request_version = state.request_version
             state.tool_calls.extend(exc.records)
             for record in exc.records:
                 self.logger.log("tool_call", state.run_id, **record.model_dump())
@@ -273,6 +365,7 @@ class ShoppingAgent:
             raise
         state.tool_calls.extend(records)
         for record in records:
+            record.request_version = state.request_version
             self.logger.log("tool_call", state.run_id, **record.model_dump())
         return result
 
@@ -293,11 +386,13 @@ class ShoppingAgent:
         return context
 
     def _no_match(self, state: AgentState, message: str) -> AgentState:
+        state.enter_phase("completed")
         state.recommendation = Recommendation(status="no_match", message=message, limitations=list(state.errors))
         self.logger.log("no_match", state.run_id, message=message)
         return state
 
     def _error(self, state: AgentState, message: str) -> AgentState:
+        state.enter_phase("failed")
         state.errors.append(message)
         state.recommendation = Recommendation(status="error", message=message, limitations=list(state.errors))
         self.logger.log("agent_error", state.run_id, message=message)
