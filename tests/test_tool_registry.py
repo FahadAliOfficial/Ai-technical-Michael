@@ -63,3 +63,38 @@ def test_schema_validator_supports_nested_objects_and_constraints() -> None:
     with pytest.raises(SchemaValidationError):
         validate_arguments(schema, {"request": {"sku": "bad", "quantity": 0}})
 
+
+def test_schema_validator_rejects_boolean_as_integer() -> None:
+    schema = {
+        "type": "object",
+        "properties": {"quantity": {"type": "integer"}},
+        "required": ["quantity"],
+    }
+    with pytest.raises(SchemaValidationError):
+        validate_arguments(schema, {"quantity": True})
+
+
+def test_argument_adapter_binds_nested_runtime_schema() -> None:
+    schema = {
+        "type": "object",
+        "properties": {
+            "request": {
+                "type": "object",
+                "properties": {
+                    "sku": {"type": "string", "description": "Product SKU"},
+                    "market": {"type": "string", "description": "Inventory region"},
+                    "units": {"type": "integer", "description": "Units needed"},
+                },
+                "required": ["sku", "market", "units"],
+                "additionalProperties": False,
+            }
+        },
+        "required": ["request"],
+        "additionalProperties": False,
+    }
+    result = ArgumentAdapter().bind(
+        schema,
+        {"product_id": "LAPTOP_001", "region": "US", "quantity": 1},
+    )
+    assert result == {"request": {"sku": "LAPTOP_001", "market": "US", "units": 1}}
+

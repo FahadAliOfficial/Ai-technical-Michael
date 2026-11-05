@@ -38,11 +38,24 @@ def tool_match_score(
     wanted = semantic_tokens(goal)
     available = semantic_tokens(f"{name} {description}")
     score = len(wanted & available)
-    properties = parameters.get("properties", {})
-    roles = {semantic_role(key, value) for key, value in properties.items()}
+    def parameter_roles(schema: dict[str, Any]) -> set[str]:
+        roles: set[str] = set()
+        for key, value in schema.get("properties", {}).items():
+            if value.get("type") == "object":
+                roles.update(parameter_roles(value))
+            else:
+                roles.add(semantic_role(key, value))
+        return roles
+
+    roles = parameter_roles(parameters)
 
     if wanted & {"availability", "inventory", "stock"}:
-        score += 10 if "product_id" in roles and "query" not in roles else -5
+        if "query" in roles:
+            score -= 5
+        elif "product_id" in roles and roles & {"region", "quantity"}:
+            score += 15
+        elif "product_id" in roles:
+            score += 5
     if wanted & {"search", "find", "query", "catalog"}:
         score += 10 if "query" in roles else 0
     if wanted & {"compare", "comparison", "contrast"}:

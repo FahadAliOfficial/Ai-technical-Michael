@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
+from dataclasses import dataclass
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 
 from ..models import Product, ReviewSummary, ToolCallRecord
@@ -25,6 +27,13 @@ class ToolExecutionError(RuntimeError):
         self.code = code
 
 
+@dataclass(frozen=True, slots=True)
+class QueuedFailure:
+    message: str
+    retryable: bool
+    code: str
+
+
 class MockToolEnvironment:
     def __init__(
         self,
@@ -38,20 +47,38 @@ class MockToolEnvironment:
         }
         self.inventory = json.loads(Path(inventory_path).read_text(encoding="utf-8"))
         self.reviews = json.loads(Path(reviews_path).read_text(encoding="utf-8"))
-        self.failures: dict[str, list[str]] = {}
+        self.failures: dict[str, list[QueuedFailure]] = {}
         self.price_sequences: dict[str, list[float]] = {}
 
-    def queue_failure(self, tool_name: str, error: str = "timeout", count: int = 1) -> None:
-        self.failures.setdefault(tool_name, []).extend([error] * count)
+    def queue_failure(
+        self,
+        tool_name: str,
+        error: str = "timeout",
+        count: int = 1,
+        *,
+        retryable: bool | None = None,
+        code: str | None = None,
+    ) -> None:
+        if retryable is None:
+            retryable = any(token in error.lower() for token in ("timeout", "unavailable", "connection", "rate limit"))
+        failure = QueuedFailure(
+            message=error,
+            retryable=retryable,
+            code=code or ("transient" if retryable else "tool_error"),
+        )
+        self.failures.setdefault(tool_name, []).extend([failure] * count)
 
     def queue_prices(self, product_id: str, prices: list[float]) -> None:
         self.price_sequences[product_id] = list(prices)
 
     def execute(self, tool: ToolDefinition, arguments: dict[str, Any]) -> dict[str, Any]:
         if self.failures.get(tool.name):
-            error = self.failures[tool.name].pop(0)
-            retryable = any(token in error.lower() for token in ("timeout", "unavailable", "connection", "rate limit"))
-            raise ToolExecutionError(error, retryable=retryable, code="transient" if retryable else "tool_error")
+            failure = self.failures[tool.name].pop(0)
+            raise ToolExecutionError(
+                failure.message,
+                retryable=failure.retryable,
+                code=failure.code,
+            )
         validate_arguments(tool.parameters, arguments)
         args = normalize_arguments(tool.parameters, arguments)
         handler = getattr(self, f"_handle_{tool.handler}", None)
@@ -94,11 +121,21 @@ class MockToolEnvironment:
             return {"product_id": product_id, "available": None, "quantity": None}
         quantity = int(inventory.get("quantity", 0))
         requested = int(args.get("quantity", 1))
+        requested_region = str(args.get("region", inventory.get("region", "US")))
+        inventory_region = str(inventory.get("region", "US"))
+        if requested_region.casefold() != inventory_region.casefold():
+            return {
+                "product_id": product_id,
+                "available": False,
+                "quantity": 0,
+                "region": requested_region,
+                "reason": f"No inventory snapshot is available for region {requested_region}",
+            }
         return {
             "product_id": product_id,
             "available": quantity >= requested,
             "quantity": quantity,
-            "region": args.get("region", inventory.get("region", "US")),
+            "region": requested_region,
         }
 
     def _handle_compare(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -121,9 +158,18 @@ class ToolExecutor:
         tool = self.registry.get(tool_name)
         records: list[ToolCallRecord] = []
         for attempt in range(1, self.max_retries + 2):
+            started = perf_counter()
             try:
                 result = self.environment.execute(tool, arguments)
-                records.append(ToolCallRecord(tool_name=tool_name, arguments=arguments, status="success", attempt=attempt))
+                records.append(
+                    ToolCallRecord(
+                        tool_name=tool_name,
+                        arguments=arguments,
+                        status="success",
+                        attempt=attempt,
+                        duration_ms=round((perf_counter() - started) * 1000, 3),
+                    )
+                )
                 return result, records
             except (SchemaValidationError, ValueError) as exc:
                 records.append(
@@ -133,6 +179,8 @@ class ToolExecutor:
                         status="error",
                         attempt=attempt,
                         error=str(exc),
+                        error_code="invalid_arguments",
+                        duration_ms=round((perf_counter() - started) * 1000, 3),
                     )
                 )
                 raise ToolExecutionError(
@@ -149,6 +197,8 @@ class ToolExecutor:
                         status="error",
                         attempt=attempt,
                         error=str(exc),
+                        error_code=exc.code,
+                        duration_ms=round((perf_counter() - started) * 1000, 3),
                     )
                 )
                 if not exc.retryable or attempt > self.max_retries:

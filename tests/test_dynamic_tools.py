@@ -117,3 +117,39 @@ def test_adapts_to_synonym_only_stock_schema(settings, registry, environment) ->
     assert calls
     assert set(calls[0].arguments) == {"sku", "market_code", "units_needed"}
 
+
+def test_adapts_to_nested_inventory_request_schema(settings, registry, environment) -> None:
+    registry.remove("check_availability")
+    registry.register(
+        ToolDefinition(
+            name="regional_stock_probe",
+            description="Find current inventory stock using a nested request envelope.",
+            handler="availability",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "request": {
+                        "type": "object",
+                        "properties": {
+                            "sku": {"type": "string", "description": "Product SKU."},
+                            "market": {"type": "string", "description": "Inventory market or region."},
+                            "units": {"type": "integer", "description": "Units or quantity needed."},
+                        },
+                        "required": ["sku", "market", "units"],
+                        "additionalProperties": False,
+                    }
+                },
+                "required": ["request"],
+                "additionalProperties": False,
+            },
+        )
+    )
+    state = make_agent(settings, registry, environment).run(SAMPLE_REQUEST)
+    assert state.recommendation.status == "success"
+    call = next(record for record in state.tool_calls if record.tool_name == "regional_stock_probe")
+    assert call.arguments["request"] == {
+        "sku": call.arguments["request"]["sku"],
+        "market": "US",
+        "units": 1,
+    }
+

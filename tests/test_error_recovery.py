@@ -46,4 +46,21 @@ def test_non_retryable_tool_error_is_attempted_once(agent, environment) -> None:
     attempts = [record for record in state.tool_calls if record.tool_name == "search_products"]
     assert state.recommendation.status == "error"
     assert len(attempts) == 1
+    assert attempts[0].error_code == "tool_error"
+    assert attempts[0].duration_ms >= 0
+
+
+def test_typed_transient_error_retries_without_message_heuristics(agent, environment) -> None:
+    environment.queue_failure(
+        "search_products",
+        "vendor code E-42",
+        count=1,
+        retryable=True,
+        code="upstream_busy",
+    )
+    state = agent.run(SAMPLE_REQUEST)
+    calls = [record for record in state.tool_calls if record.tool_name == "search_products"]
+    assert state.recommendation.status == "success"
+    assert calls[0].error_code == "upstream_busy"
+    assert calls[1].status == "success"
 

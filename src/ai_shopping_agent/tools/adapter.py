@@ -39,6 +39,8 @@ class ArgumentAdapter:
         for name, schema in properties.items():
             role = semantic_role(name, schema)
             value = context.get(role, defaults.get(role, schema.get("default")))
+            if value is None and schema.get("type") == "object" and schema.get("properties"):
+                value = self.bind(schema, context)
             if value is not None:
                 result[name] = value
             elif name in required:
@@ -73,7 +75,8 @@ def validate_arguments(schema: dict[str, Any], arguments: dict[str, Any]) -> Non
         if value is None and "null" in allowed_types:
             return
         valid_types = [type_map[item] for item in allowed_types if item in type_map]
-        if valid_types and not any(isinstance(value, item_type) for item_type in valid_types):
+        bool_as_number = isinstance(value, bool) and any(item in {"integer", "number"} for item in allowed_types)
+        if bool_as_number or (valid_types and not any(isinstance(value, item_type) for item_type in valid_types)):
             raise SchemaValidationError(f"Argument {name!r} must be one of {allowed_types}")
         if "enum" in spec and value not in spec["enum"]:
             raise SchemaValidationError(f"Argument {name!r} must be one of {spec['enum']}")
@@ -107,5 +110,12 @@ def validate_arguments(schema: dict[str, Any], arguments: dict[str, Any]) -> Non
 
 def normalize_arguments(parameters: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
     properties = parameters.get("properties", {})
-    return {semantic_role(name, properties.get(name, {})): value for name, value in arguments.items()}
+    normalized: dict[str, Any] = {}
+    for name, value in arguments.items():
+        specification = properties.get(name, {})
+        if isinstance(value, dict) and specification.get("type") == "object":
+            normalized.update(normalize_arguments(specification, value))
+        else:
+            normalized[semantic_role(name, specification)] = value
+    return normalized
 
