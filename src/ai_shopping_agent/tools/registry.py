@@ -7,6 +7,52 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from .adapter import semantic_role
+
+
+_SYNONYM_GROUPS = (
+    {"availability", "inventory", "stock"},
+    {"search", "find", "query", "catalog"},
+    {"details", "specifications", "specs", "inspect"},
+    {"compare", "comparison", "contrast"},
+    {"reviews", "review", "feedback", "ratings", "rating"},
+    {"product", "item", "sku"},
+)
+
+
+def semantic_tokens(text: str) -> set[str]:
+    tokens = set(re.findall(r"[a-z0-9]+", text.lower().replace("_", " ")))
+    expanded = set(tokens)
+    for group in _SYNONYM_GROUPS:
+        if tokens & group:
+            expanded.update(group)
+    return expanded
+
+
+def tool_match_score(
+    goal: str,
+    name: str,
+    description: str,
+    parameters: dict[str, Any],
+) -> int:
+    wanted = semantic_tokens(goal)
+    available = semantic_tokens(f"{name} {description}")
+    score = len(wanted & available)
+    properties = parameters.get("properties", {})
+    roles = {semantic_role(key, value) for key, value in properties.items()}
+
+    if wanted & {"availability", "inventory", "stock"}:
+        score += 10 if "product_id" in roles and "query" not in roles else -5
+    if wanted & {"search", "find", "query", "catalog"}:
+        score += 10 if "query" in roles else 0
+    if wanted & {"compare", "comparison", "contrast"}:
+        score += 10 if "product_ids" in roles else 0
+    if wanted & {"details", "specifications", "specs", "inspect"}:
+        score += 5 if roles == {"product_id"} else 0
+    if wanted & {"reviews", "review", "feedback", "ratings", "rating"}:
+        score += 5 if roles == {"product_id"} else 0
+    return score
+
 
 class ToolDefinition(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -52,13 +98,9 @@ class ToolRegistry:
         self._tools.pop(name, None)
 
     def find(self, goal: str) -> ToolDefinition:
-        stop = {"a", "an", "and", "for", "of", "the", "to", "using", "with"}
-        wanted = {token for token in re.findall(r"[a-z0-9]+", goal.lower()) if token not in stop}
         best: tuple[int, ToolDefinition] | None = None
         for tool in self._tools.values():
-            haystack = f"{tool.name} {tool.description}".lower().replace("_", " ")
-            available = set(re.findall(r"[a-z0-9]+", haystack))
-            score = len(wanted & available)
+            score = tool_match_score(goal, tool.name, tool.description, tool.parameters)
             if best is None or score > best[0]:
                 best = (score, tool)
         if best is None or best[0] == 0:

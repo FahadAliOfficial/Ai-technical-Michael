@@ -6,14 +6,23 @@ from pathlib import Path
 from typing import Any
 
 from ..models import Product, ReviewSummary, ToolCallRecord
-from .adapter import normalize_arguments, validate_arguments
+from .adapter import SchemaValidationError, normalize_arguments, validate_arguments
 from .registry import ToolDefinition, ToolRegistry
 
 
 class ToolExecutionError(RuntimeError):
-    def __init__(self, message: str, records: list[ToolCallRecord] | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        records: list[ToolCallRecord] | None = None,
+        *,
+        retryable: bool = False,
+        code: str = "tool_error",
+    ) -> None:
         super().__init__(message)
         self.records = records or []
+        self.retryable = retryable
+        self.code = code
 
 
 class MockToolEnvironment:
@@ -41,7 +50,8 @@ class MockToolEnvironment:
     def execute(self, tool: ToolDefinition, arguments: dict[str, Any]) -> dict[str, Any]:
         if self.failures.get(tool.name):
             error = self.failures[tool.name].pop(0)
-            raise ToolExecutionError(error)
+            retryable = any(token in error.lower() for token in ("timeout", "unavailable", "connection", "rate limit"))
+            raise ToolExecutionError(error, retryable=retryable, code="transient" if retryable else "tool_error")
         validate_arguments(tool.parameters, arguments)
         args = normalize_arguments(tool.parameters, arguments)
         handler = getattr(self, f"_handle_{tool.handler}", None)
@@ -115,7 +125,7 @@ class ToolExecutor:
                 result = self.environment.execute(tool, arguments)
                 records.append(ToolCallRecord(tool_name=tool_name, arguments=arguments, status="success", attempt=attempt))
                 return result, records
-            except (ToolExecutionError, ValueError) as exc:
+            except (SchemaValidationError, ValueError) as exc:
                 records.append(
                     ToolCallRecord(
                         tool_name=tool_name,
@@ -125,10 +135,28 @@ class ToolExecutor:
                         error=str(exc),
                     )
                 )
-                if attempt > self.max_retries:
+                raise ToolExecutionError(
+                    f"{tool_name} rejected non-retryable arguments: {exc}",
+                    records=records,
+                    retryable=False,
+                    code="invalid_arguments",
+                ) from exc
+            except ToolExecutionError as exc:
+                records.append(
+                    ToolCallRecord(
+                        tool_name=tool_name,
+                        arguments=arguments,
+                        status="error",
+                        attempt=attempt,
+                        error=str(exc),
+                    )
+                )
+                if not exc.retryable or attempt > self.max_retries:
                     raise ToolExecutionError(
                         f"{tool_name} failed after {attempt} attempts: {exc}",
                         records=records,
+                        retryable=False,
+                        code=exc.code,
                     ) from exc
         raise AssertionError("unreachable")
 

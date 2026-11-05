@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 
@@ -57,7 +58,7 @@ def validate_arguments(schema: dict[str, Any], arguments: dict[str, Any]) -> Non
         if extras:
             raise SchemaValidationError(f"Unexpected arguments: {', '.join(extras)}")
 
-    type_map = {
+    type_map: dict[str, Any] = {
         "string": str,
         "number": (int, float),
         "integer": int,
@@ -65,17 +66,43 @@ def validate_arguments(schema: dict[str, Any], arguments: dict[str, Any]) -> Non
         "array": list,
         "object": dict,
     }
-    for name, value in arguments.items():
-        spec = properties.get(name, {})
+
+    def validate_value(name: str, value: Any, spec: dict[str, Any]) -> None:
         expected = spec.get("type")
-        if expected in type_map and not isinstance(value, type_map[expected]):
-            raise SchemaValidationError(f"Argument {name!r} must be {expected}")
+        allowed_types = expected if isinstance(expected, list) else [expected]
+        if value is None and "null" in allowed_types:
+            return
+        valid_types = [type_map[item] for item in allowed_types if item in type_map]
+        if valid_types and not any(isinstance(value, item_type) for item_type in valid_types):
+            raise SchemaValidationError(f"Argument {name!r} must be one of {allowed_types}")
         if "enum" in spec and value not in spec["enum"]:
             raise SchemaValidationError(f"Argument {name!r} must be one of {spec['enum']}")
-        if expected == "array" and "items" in spec:
-            item_type = spec["items"].get("type")
-            if item_type in type_map and any(not isinstance(item, type_map[item_type]) for item in value):
-                raise SchemaValidationError(f"Items in {name!r} must be {item_type}")
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            if "minimum" in spec and value < spec["minimum"]:
+                raise SchemaValidationError(f"Argument {name!r} must be >= {spec['minimum']}")
+            if "maximum" in spec and value > spec["maximum"]:
+                raise SchemaValidationError(f"Argument {name!r} must be <= {spec['maximum']}")
+        if isinstance(value, str):
+            if "minLength" in spec and len(value) < spec["minLength"]:
+                raise SchemaValidationError(f"Argument {name!r} is shorter than minLength")
+            if "maxLength" in spec and len(value) > spec["maxLength"]:
+                raise SchemaValidationError(f"Argument {name!r} is longer than maxLength")
+            if "pattern" in spec and re.search(spec["pattern"], value) is None:
+                raise SchemaValidationError(f"Argument {name!r} does not match the required pattern")
+        if isinstance(value, list):
+            if "minItems" in spec and len(value) < spec["minItems"]:
+                raise SchemaValidationError(f"Argument {name!r} has too few items")
+            if "maxItems" in spec and len(value) > spec["maxItems"]:
+                raise SchemaValidationError(f"Argument {name!r} has too many items")
+            item_spec = spec.get("items", {})
+            for index, item in enumerate(value):
+                validate_value(f"{name}[{index}]", item, item_spec)
+        if isinstance(value, dict) and (expected == "object" or "object" in allowed_types):
+            validate_arguments(spec, value)
+
+    for name, value in arguments.items():
+        spec = properties.get(name, {})
+        validate_value(name, value, spec)
 
 
 def normalize_arguments(parameters: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
