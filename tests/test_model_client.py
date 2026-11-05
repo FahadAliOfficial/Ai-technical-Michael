@@ -85,6 +85,7 @@ def test_openai_tool_loop_returns_tool_output_to_model() -> None:
     assert result.final_text == "In stock."
     assert result.steps == 2
     assert result.usage["total_tokens"] == 30
+    assert result.calls[0]["result"]["available"] is True
     continuation = responses.calls[1]["input"]
     assert any(isinstance(item, dict) and item.get("type") == "function_call_output" for item in continuation)
     assert responses.calls[0]["tool_choice"] == "required"

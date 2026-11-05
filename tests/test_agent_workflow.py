@@ -1,3 +1,6 @@
+from ai_shopping_agent.agent import ShoppingAgent
+from ai_shopping_agent.audit import AuditLogger
+from ai_shopping_agent.model_client import SchemaAwareModelClient, ToolLoopResult
 from conftest import SAMPLE_REQUEST
 
 
@@ -74,4 +77,58 @@ def test_response_exposes_constraints_scores_and_comparison(agent) -> None:
     assert result.recommended.score_breakdown
     assert result.comparison_summary
     assert "Alternatives:" in result.message
+
+
+def test_model_parsing_fallback_is_disclosed_on_initial_and_follow_up_runs(
+    settings,
+    registry,
+    environment,
+) -> None:
+    class FailingParserModel(SchemaAwareModelClient):
+        def parse_requirements(self, request, previous=None):
+            raise RuntimeError("structured extraction unavailable")
+
+    logger = AuditLogger()
+    fallback_agent = ShoppingAgent(
+        settings,
+        registry=registry,
+        environment=environment,
+        model_client=FailingParserModel(),
+        logger=logger,
+    )
+    state = fallback_agent.run(SAMPLE_REQUEST)
+    assert any("deterministic fallback used" in error for error in state.errors)
+    updated = fallback_agent.run("My maximum budget is $900 now", state)
+    assert any("deterministic fallback used" in error for error in updated.errors)
+    assert len([event for event in logger.events if event["event"] == "model_parsing_fallback"]) == 2
+
+
+def test_user_facing_comparison_is_rendered_from_tool_evidence(
+    settings,
+    registry,
+    environment,
+) -> None:
+    class UntrustedNarrativeModel(SchemaAwareModelClient):
+        def run_tool_loop(self, prompt, tools, execute, *, max_steps=8):
+            arguments = {"product_ids": ["LAPTOP_001", "LAPTOP_002"]}
+            result = execute(tools[0]["name"], arguments)
+            return ToolLoopResult(
+                final_text="INVENTED PRODUCT with unsupported specifications",
+                steps=2,
+                calls=[{"name": tools[0]["name"], "arguments": arguments, "call_id": "test", "result": result}],
+            )
+
+    grounded_agent = ShoppingAgent(
+        settings,
+        registry=registry,
+        environment=environment,
+        model_client=UntrustedNarrativeModel(),
+        logger=AuditLogger(),
+    )
+    state = grounded_agent.run(SAMPLE_REQUEST)
+    assert state.recommendation.status == "success"
+    assert state.recommendation.comparison_summary.startswith("Verified comparison:")
+    assert "INVENTED PRODUCT" not in state.recommendation.comparison_summary
+    compare_calls = [call for call in state.tool_calls if call.tool_name == "compare_products"]
+    assert len(compare_calls) == 1
 

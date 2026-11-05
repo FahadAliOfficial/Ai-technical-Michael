@@ -108,6 +108,8 @@ class ToolCallRecord(StrictModel):
     attempt: int = 1
     request_version: int = 1
     error: str | None = None
+    error_code: str | None = None
+    duration_ms: float = Field(default=0, ge=0)
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 

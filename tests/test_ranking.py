@@ -33,3 +33,11 @@ def test_ranking_is_deterministic_on_ties() -> None:
     b = product("B", 1000, 10, 1.5, 4.0)
     assert [item.product.product_id for item in rank_products([b, a], requirements)] == ["A", "B"]
 
+
+def test_score_is_normalized_to_one_hundred_without_optional_preferences() -> None:
+    requirements = Requirements(max_price=1200)
+    ideal = product("IDEAL", 0, 10, 1.5, 5.0)
+    ranked = rank_products([ideal], requirements)
+    assert ranked[0].score == 100
+    assert sum(ranked[0].score_breakdown.values()) == 100
+

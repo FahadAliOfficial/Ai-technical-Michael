@@ -193,7 +193,14 @@ class OpenAIModelClient:
                 arguments = json.loads(call.arguments)
                 validate_arguments(selected["parameters"], arguments)
                 result = execute(call.name, arguments)
-                calls.append({"name": call.name, "arguments": arguments, "call_id": call.call_id})
+                calls.append(
+                    {
+                        "name": call.name,
+                        "arguments": arguments,
+                        "call_id": call.call_id,
+                        "result": result,
+                    }
+                )
                 input_items.append(
                     {
                         "type": "function_call_output",

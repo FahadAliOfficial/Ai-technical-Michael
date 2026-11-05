@@ -54,17 +54,20 @@ class ShoppingAgent:
 
     def run(self, request: str, state: AgentState | None = None) -> AgentState:
         previous = state.requirements if state else None
+        parsing_warning: str | None = None
         try:
             requirements = self.model.parse_requirements(request, previous)
         except Exception as exc:
             requirements = SchemaAwareModelClient().parse_requirements(request, previous)
-            if state:
-                state.errors.append(f"Model parsing failed; deterministic fallback used: {exc}")
+            parsing_warning = f"Model parsing failed; deterministic fallback used: {exc}"
 
         if state is None:
             state = self.states.new(request, requirements)
         else:
             self.states.update(state, request, requirements)
+        if parsing_warning:
+            state.errors.append(parsing_warning)
+            self.logger.log("model_parsing_fallback", state.run_id, error=str(parsing_warning))
         state.discovered_tools = [tool.name for tool in self.registry.list()]
         self.logger.log("requirements_parsed", state.run_id, requirements=requirements.model_dump())
 
@@ -193,8 +196,8 @@ class ShoppingAgent:
 
         final_ranked = rank_products(final_products, requirements, reviews)
         compare_ids = [item.product.product_id for item in final_ranked[:3]]
-        comparison_summary: str | None = None
-        if len(compare_ids) > 1:
+        comparison_summary = self._model_comparison(state, final_ranked, requirements)
+        if len(compare_ids) > 1 and comparison_summary is None:
             comparison = self._safe_select(
                 "compare selected products",
                 self._context(state, product_ids=compare_ids),
@@ -203,15 +206,14 @@ class ShoppingAgent:
             if comparison:
                 try:
                     comparison_payload = self._call(state, *comparison)
-                    compared_names = [item.get("name", item.get("product_id", "unknown")) for item in comparison_payload.get("products", [])]
-                    comparison_summary = "Compared current specifications for: " + ", ".join(compared_names)
+                    comparison_summary = self._grounded_comparison_summary(
+                        final_ranked,
+                        comparison_payload,
+                    )
                 except ToolExecutionError as exc:
                     state.errors.append(f"Comparison tool failed; deterministic ranking retained: {exc}")
 
         state.enter_phase("responding")
-        grounded_summary = self._model_comparison(state, final_ranked, requirements)
-        if grounded_summary:
-            comparison_summary = grounded_summary
         limitations = list(state.errors)
         state.recommendation = success_response(final_ranked, requirements, limitations, comparison_summary)
         self.logger.log(
@@ -232,13 +234,11 @@ class ShoppingAgent:
         run_tool_loop = getattr(self.model, "run_tool_loop", None)
         if run_tool_loop is None:
             return None
-        comparison_tools = [
-            tool.as_openai_tool()
-            for tool in self.registry.list()
-            if tool.handler == "compare"
-        ]
-        if not comparison_tools:
+        try:
+            comparison_tool = self.registry.find("compare selected products")
+        except LookupError:
             return None
+        comparison_tools = [comparison_tool.as_openai_tool()]
         candidate_ids = [item.product.product_id for item in ranked[:3]]
         prompt = (
             "Compare these already validated candidates and explain why the first-ranked option is recommended, "
@@ -268,7 +268,34 @@ class ShoppingAgent:
             usage=result.usage,
             request_ids=getattr(self.model, "request_ids", result.request_ids),
         )
-        return result.final_text
+        comparison_payload = result.calls[-1].get("result", {})
+        return self._grounded_comparison_summary(ranked, comparison_payload)
+
+    @staticmethod
+    def _grounded_comparison_summary(ranked: list[Any], payload: dict[str, Any]) -> str:
+        """Render comparison evidence only from validated rank data and tool output."""
+        tool_products = {
+            item.get("product_id"): item
+            for item in payload.get("products", [])
+            if isinstance(item, dict) and item.get("product_id")
+        }
+        lines: list[str] = []
+        for index, item in enumerate(ranked[:3], start=1):
+            product = item.product
+            current = tool_products.get(product.product_id, {})
+            name = current.get("name", product.name)
+            price = current.get("price", product.price)
+            battery = current.get("battery_hours", product.battery_hours)
+            weight = current.get("weight_kg", product.weight_kg)
+            details = [f"#{index} {name}", f"${price:,.2f}", f"score {item.score:.2f}/100"]
+            if battery is not None:
+                details.append(f"battery {battery:g}h")
+            if weight is not None:
+                details.append(f"weight {weight:g}kg")
+            if item.tradeoffs:
+                details.append("trade-offs: " + "; ".join(item.tradeoffs))
+            lines.append(", ".join(details))
+        return "Verified comparison: " + " | ".join(lines)
 
     def _collect_reviews(self, state: AgentState, products: list[Product]) -> dict[str, ReviewSummary]:
         selected = self._safe_select(
