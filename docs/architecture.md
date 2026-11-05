@@ -19,8 +19,9 @@ flowchart TD
     X --> V[Deterministic validator]
     V -->|Rejected| J[Rejection reason + audit log]
     V -->|Valid| K[Preference ranker]
-    K --> F[Final price and stock verification]
-    F --> O[Recommendation + alternatives + limitations]
+    K --> F[Exhaustive rank-ordered price and stock verification]
+    F --> L[Bounded Responses tool-result loop]
+    L --> O[Grounded recommendation + checks + alternatives + limitations]
 ```
 
 ## Trust boundaries
@@ -69,7 +70,11 @@ inventory_lookup(product_code, region, requested_quantity)
 
 can replace `check_availability(product_id)` without changing agent orchestration.
 
-All calls are locally checked for required arguments, primitive types, arrays, enumerations, and unexpected properties before execution.
+All calls are locally checked for required arguments, nullable unions, nested objects, primitive types, arrays, enumerations, numeric limits, string patterns, collection sizes, and unexpected properties before execution.
+
+## Responses continuation loop
+
+The model receives only comparison tools and already validated candidate IDs. For every `function_call`, the application validates arguments, executes through `ToolExecutor`, and appends a `function_call_output` with the matching `call_id`. The loop stops on a final message or a six-step safety bound. Deterministic validation remains authoritative, so the model cannot introduce a new candidate or waive a failed hard constraint.
 
 ## Failure policy
 
@@ -82,4 +87,6 @@ All calls are locally checked for required arguments, primitive types, arrays, e
 | Missing mandatory field | Reject the product |
 | Model parsing/selection failure | Use deterministic fallback and disclose it |
 | Price/stock change | Revalidate against the latest snapshot |
+| Leading candidates become invalid | Continue through the ranked queue until three valid products survive or all are exhausted |
+| Non-retryable tool error | Fail immediately after one recorded attempt |
 

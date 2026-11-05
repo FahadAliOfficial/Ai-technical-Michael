@@ -8,6 +8,8 @@
 
 **Trade-off:** The project implements a concise agent loop rather than relying on a framework runner. That additional code is intentional evidence for orchestration, state management, recovery, and logging criteria.
 
+The final comparison uses a real stateless Responses continuation loop. Tool outputs are returned with their `call_id`; the loop has a maximum-step guard and cannot change the deterministic valid-candidate set.
+
 ## ADR-002: Single agent
 
 **Decision:** Use one shopping agent with normal Python components.
@@ -34,7 +36,13 @@
 
 ## ADR-006: Recheck volatile data
 
-**Decision:** Re-fetch full details and inventory for the five strongest candidates before recommending.
+**Decision:** Re-fetch full details and inventory in rank order until three valid candidates survive or the candidate set is exhausted.
 
-**Reason:** Search results and early snapshots may become stale. Final validation uses current price and availability.
+**Reason:** Search results and early snapshots may become stale. Final validation uses current price and availability without incorrectly returning no match when only the first-ranked candidates changed.
+
+## ADR-007: Requirement completeness before tools
+
+**Decision:** Do not call search until category, maximum budget, minimum RAM, minimum storage, and storage type are known.
+
+**Reason:** An absent mandatory value is a customer clarification need, not a tool-compatibility failure.
 

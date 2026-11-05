@@ -11,7 +11,7 @@ A reliable single-agent shopping system that separates language understanding fr
 - Hard constraints are enforced by Python, never by model judgment.
 - Typed state tracks request versions, candidates, rejection reasons, pending checks, errors, tool calls, and results.
 - Price and availability are queried again before the final decision.
-- Forty documented scenarios and more than fifty automated tests cover happy paths, adversarial data, schema changes, and failures.
+- Forty-five documented scenarios, 67 offline tests, and two opt-in live OpenAI tests cover happy paths, adversarial data, schema changes, failures, and the real API boundary.
 
 ## Requirements
 
@@ -71,6 +71,7 @@ The default request is the assessment's laptop scenario. Runtime logs are writte
 ```powershell
 python -m pytest
 shopping-agent-eval
+shopping-agent-eval --live
 ```
 
 Or without package installation:
@@ -80,7 +81,7 @@ $env:PYTHONPATH = "src"
 python -m ai_shopping_agent.evaluation.runner
 ```
 
-The evaluation command writes `evidence/evaluation-results.json` and exits unsuccessfully unless all tests and all five quality gates pass.
+The evaluation command writes `evidence/evaluation-results.json` and exits unsuccessfully unless all tests and all five behavior-specific quality gates pass. `--live` also runs paid OpenAI integration tests using the key from `.env`.
 
 ## How the agent works
 
@@ -90,8 +91,9 @@ The evaluation command writes `evidence/evaluation-results.json` and exits unsuc
 4. Execute only through `ToolExecutor` and record each attempt.
 5. Retrieve complete product details and reject missing or invalid mandatory data.
 6. Verify inventory, retrieve reviews, and rank only valid products.
-7. Re-fetch current details and inventory for leading candidates.
-8. Return the best valid product, alternatives, trade-offs, and limitations.
+7. Re-fetch current details and inventory in rank order until three current valid candidates survive.
+8. Run a bounded Responses function-call continuation loop: execute comparison calls, return each result with its `call_id`, and obtain a grounded explanation.
+9. Return the best valid product, mandatory checks, score breakdown, alternatives, trade-offs, and limitations.
 
 If model parsing or tool selection fails, the deterministic schema-aware fallback attempts safe recovery. Hard validation never falls back to an LLM.
 
@@ -119,6 +121,6 @@ evidence/                    committed sample log and evaluation result
 
 - Secrets are loaded from the environment and excluded by `.gitignore`.
 - Tool and decision logs contain no API keys.
-- API responses are created with `store=False` by this client.
+- API responses are created with `store=False`; tool-loop output items are replayed locally with matching `call_id` values.
 - The mock environment is local and performs no external product calls.
 
