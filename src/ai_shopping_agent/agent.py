@@ -47,17 +47,26 @@ class ShoppingAgent:
         self.logger = logger or AuditLogger(self.settings.log_path)
         self.states = StateManager()
         self.adapter = ArgumentAdapter()
+        self._model_available = True
 
     @property
     def mode(self) -> str:
         return "openai" if isinstance(self.model, OpenAIModelClient) else "offline-schema-aware"
 
+    @property
+    def execution_mode(self) -> str:
+        if self.mode == "openai" and not self._model_available:
+            return "openai configured; deterministic fallback active"
+        return self.mode
+
     def run(self, request: str, state: AgentState | None = None) -> AgentState:
+        self._model_available = True
         previous = state.requirements if state else None
         parsing_warning: str | None = None
         try:
             requirements = self.model.parse_requirements(request, previous)
         except Exception as exc:
+            self._model_available = False
             requirements = SchemaAwareModelClient().parse_requirements(request, previous)
             parsing_warning = f"Model parsing failed; deterministic fallback used: {exc}"
 
@@ -232,7 +241,7 @@ class ShoppingAgent:
         requirements: Requirements,
     ) -> str | None:
         run_tool_loop = getattr(self.model, "run_tool_loop", None)
-        if run_tool_loop is None:
+        if run_tool_loop is None or not self._model_available:
             return None
         try:
             comparison_tool = self.registry.find("compare selected products")
@@ -368,9 +377,16 @@ class ShoppingAgent:
         state: AgentState,
     ) -> tuple[str, dict[str, Any]] | None:
         tools = self.registry.openai_tools()
+        if not self._model_available:
+            try:
+                tool = self.registry.find(goal)
+                return tool.name, self.adapter.bind(tool.parameters, context)
+            except (LookupError, ValueError, KeyError):
+                return None
         try:
             return self.model.select_tool(goal, tools, context)
         except Exception as exc:
+            self._model_available = False
             state.errors.append(f"Model tool selection failed for {goal!r}; schema fallback used: {exc}")
             try:
                 tool = self.registry.find(goal)

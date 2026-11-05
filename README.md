@@ -11,7 +11,7 @@ A reliable single-agent shopping system that separates language understanding fr
 - Hard constraints are enforced by Python, never by model judgment.
 - Typed state tracks request versions, candidates, rejection reasons, pending checks, errors, tool calls, and results.
 - Price and availability are queried again before the final decision.
-- Fifty documented scenarios, 81 offline tests, and three opt-in live OpenAI tests cover happy paths, adversarial data, nested schema changes, failures, state updates, and the real API boundary.
+- Fifty-two documented scenarios, 83 offline tests, and three opt-in live OpenAI tests cover happy paths, adversarial data, nested schema changes, failures, state updates, shell interfaces, and the real API boundary.
 
 ## Requirements
 
@@ -53,9 +53,11 @@ OPENAI_MODEL=gpt-4o-mini
 
 ```powershell
 shopping-agent
-shopping-agent "I need a development laptop under $1,000 with 32GB RAM and 1TB SSD"
+shopping-agent 'I need a development laptop under $1,000 with 32GB RAM and 1TB SSD'
 shopping-agent --json
 ```
+
+PowerShell expands `$...` expressions inside double-quoted strings. Use single quotes around shopping requests containing dollar amounts, or escape the dollar sign as `` `$ ``.
 
 Without installing the package first:
 
@@ -104,7 +106,7 @@ src/ai_shopping_agent/       agent, models, parsing, validation, ranking
 src/ai_shopping_agent/tools/ runtime schemas, adapters, executor, mock tools
 src/ai_shopping_agent/evaluation/ five-gate evaluation runner
 data/                        35-product catalog, inventory, reviews, tools
-tests/                       automated tests and 50 expected scenarios
+tests/                       automated tests and 52 expected scenarios
 docs/                        architecture, decisions, limitations, defense guide
 evidence/                    committed sample log and evaluation result
 ```

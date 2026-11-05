@@ -48,5 +48,7 @@
   {"id":"TOOL-07","category":"dynamic-tools","scenario":"Inventory tool uses a nested request object","expected":"Recursively bind and normalize SKU, region, and quantity."},
   {"id":"TOOL-08","category":"schema-validation","scenario":"Boolean supplied for an integer field","expected":"Reject the value because JSON booleans are not integers."},
   {"id":"AGENT-03","category":"grounding","scenario":"Model comparison contains an unsupported claim","expected":"Ignore untrusted prose and render the comparison from verified tool evidence."},
-  {"id":"EVAL-01","category":"evaluation","scenario":"Branch coverage falls below 85 percent","expected":"Fail the tests-and-documentation quality gate."}
+  {"id":"EVAL-01","category":"evaluation","scenario":"Branch coverage falls below 85 percent","expected":"Fail the tests-and-documentation quality gate."},
+  {"id":"CLI-01","category":"interface","scenario":"PowerShell expands a dollar amount in double quotes","expected":"Detect the incomplete budget and explain safe PowerShell quoting."},
+  {"id":"ERR-04","category":"resilience","scenario":"OpenAI connection fails at the start of a run","expected":"Trip a per-run circuit breaker, recover deterministically, and disclose one limitation."}
 ]

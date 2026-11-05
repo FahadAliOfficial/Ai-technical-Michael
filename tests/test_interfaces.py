@@ -49,6 +49,19 @@ def test_cli_json_and_text_modes(monkeypatch, capsys, tmp_path: Path) -> None:
     assert "Mandatory checks:" in text_output
     assert "Verified comparison:" in text_output
 
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "shopping-agent",
+            "I need a development laptop under ,000 with 32GB RAM and 1TB SSD",
+        ],
+    )
+    cli.main()
+    clarification_output = capsys.readouterr().out
+    assert "Clarification:" in clarification_output
+    assert "PowerShell" in clarification_output
+
 
 def test_evaluator_parses_counts_coverage_and_failures() -> None:
     completed = subprocess.CompletedProcess(

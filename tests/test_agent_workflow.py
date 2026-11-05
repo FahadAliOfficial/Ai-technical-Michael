@@ -132,3 +132,35 @@ def test_user_facing_comparison_is_rendered_from_tool_evidence(
     compare_calls = [call for call in state.tool_calls if call.tool_name == "compare_products"]
     assert len(compare_calls) == 1
 
+
+def test_connection_failure_trips_per_run_model_circuit_breaker(
+    settings,
+    registry,
+    environment,
+) -> None:
+    class UnavailableModel(SchemaAwareModelClient):
+        def __init__(self):
+            super().__init__()
+            self.selection_attempts = 0
+
+        def parse_requirements(self, request, previous=None):
+            raise ConnectionError("network unavailable")
+
+        def select_tool(self, goal, tools, context):
+            self.selection_attempts += 1
+            raise ConnectionError("network unavailable")
+
+    model = UnavailableModel()
+    fallback_agent = ShoppingAgent(
+        settings,
+        registry=registry,
+        environment=environment,
+        model_client=model,
+        logger=AuditLogger(),
+    )
+    state = fallback_agent.run(SAMPLE_REQUEST)
+    assert state.recommendation.status == "success"
+    assert model.selection_attempts == 0
+    assert fallback_agent._model_available is False
+    assert len([error for error in state.errors if "Model" in error]) == 1
+

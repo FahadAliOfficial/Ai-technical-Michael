@@ -29,8 +29,11 @@ def main() -> None:
         print(state.model_dump_json(indent=2))
         return
     recommendation = state.recommendation
-    print(f"Mode: {agent.mode}")
+    print(f"Mode: {agent.execution_mode}")
     print(recommendation.message if recommendation else "The agent did not produce a result.")
+    if recommendation and recommendation.clarification_question:
+        print("Clarification:")
+        print(recommendation.clarification_question)
     if recommendation and recommendation.constraint_checks:
         print("Mandatory checks:")
         for check in recommendation.constraint_checks:

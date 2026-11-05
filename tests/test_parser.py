@@ -52,3 +52,11 @@ def test_conflicting_ram_request_clarification() -> None:
     assert parsed.conflicts
     assert "RAM" in (parsed.clarification_question or "")
 
+
+def test_powershell_mangled_budget_requests_precise_clarification() -> None:
+    parsed = RuleBasedRequirementParser().parse(
+        "I need a development laptop under ,000 with 32GB RAM and 1TB SSD"
+    )
+    assert parsed.conflicts
+    assert "PowerShell" in (parsed.clarification_question or "")
+

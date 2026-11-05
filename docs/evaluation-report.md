@@ -17,12 +17,12 @@ The five gates are requirements/state, dynamic tools, validation/ranking, resili
 
 The authoritative machine-readable result is `evidence/evaluation-results.json`. It records test totals, success rate, gate status, catalog size, scenario count, and any captured failure analysis.
 
-- Offline automated tests: 81 passed, 0 failed, 0 errors
+- Offline automated tests: 83 passed, 0 failed, 0 errors
 - Branch-aware coverage: 88% (85% minimum)
 - Live OpenAI integration tests: 3 passed, 0 failed, 0 errors
 - Automated success rate: 100%
 - Quality gates: 5/5
-- Documented scenarios: 50
+- Documented scenarios: 52
 - Catalog products: 35
 - Dependency check: no broken requirements
 
@@ -43,6 +43,8 @@ This score is the project's repeatable internal acceptance rubric, not a guarant
 | 5 | Nested stock schema failed only during final verification | A shorter final-verification goal tied the stock capability with product details | Recursively inspect parameter roles and weight region/quantity-bearing inventory tools |
 | 5 | Model parsing fallback warning disappeared on follow-up | State invalidation cleared the warning immediately after it was recorded | Append and log fallback evidence after state creation or update |
 | 5 | Preference score denominator changed when preferences were absent | Raw component points were always displayed as a score out of 100 | Normalize active ranking components to a true 0-100 scale |
+| 6 | PowerShell request lost `$1` from `$1,000` | PowerShell expands dollar expressions inside double-quoted arguments | Use single-quoted examples, detect the mangled pattern, and print a precise clarification |
+| 6 | One OpenAI outage produced repeated connection limitations | Every orchestration step retried the unavailable model independently | Add a per-run circuit breaker and report the actual fallback execution mode |
 
 These defects were corrected before the final evaluation. No hard constraint was relaxed to make a test pass.
 

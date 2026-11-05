@@ -86,6 +86,7 @@ The model receives only the discovered comparison tool and already validated can
 | Review failure | Continue with a disclosed limitation |
 | Missing mandatory field | Reject the product |
 | Model parsing/selection failure | Use deterministic fallback and disclose it |
+| OpenAI connection failure | Trip a per-run circuit breaker, stop repeated model calls, and continue deterministically |
 | Price/stock change | Revalidate against the latest snapshot |
 | Leading candidates become invalid | Continue through the ranked queue until three valid products survive or all are exhausted |
 | Non-retryable tool error | Fail immediately after one recorded attempt |

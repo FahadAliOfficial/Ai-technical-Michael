@@ -54,3 +54,9 @@ The model's final narrative is retained only as execution evidence. Customer-fac
 
 **Reason:** File presence and a generic green test run do not prove that each assessment capability works.
 
+## ADR-009: Per-run model circuit breaker
+
+**Decision:** After an OpenAI connection or selection failure, use deterministic parsing and schema-aware selection for the remainder of that run.
+
+**Reason:** Repeating the same unavailable external call adds latency and duplicate limitations without improving the result. A later customer request starts a new run attempt and may use OpenAI again.
+

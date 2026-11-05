@@ -42,6 +42,13 @@ class RuleBasedRequirementParser:
                 values["clarification_question"] = "What is the single maximum budget I should use?"
             else:
                 values["max_price"] = budgets[-1]
+        elif re.search(r"(?:under|below|up to|no more than)\s*,\d{3}\b", text, re.IGNORECASE):
+            values["conflicts"].append(
+                "The budget appears incomplete because the currency amount lost its leading characters."
+            )
+            values["clarification_question"] = (
+                "What is your maximum budget? In PowerShell, wrap requests containing $ in single quotes."
+            )
 
         ram = _last_match(r"(?:at least|minimum|min(?:imum)?\s+of)?\s*(\d+)\s*gb\s*(?:of\s*)?ram", text)
         if ram:
