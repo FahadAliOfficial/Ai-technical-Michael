@@ -38,5 +38,10 @@
   {"id":"ERR-03","category":"resilience","scenario":"Reviews unavailable","expected":"Continue with a limitation because reviews are not a hard constraint."},
   {"id":"RANK-01","category":"ranking","scenario":"Battery preference","expected":"Award preference score without changing validity."},
   {"id":"RANK-02","category":"ranking","scenario":"Weight preference","expected":"Explain overweight trade-off."},
-  {"id":"RANK-03","category":"ranking","scenario":"Deterministic tie","expected":"Use stable product identifier tie-break."}
+  {"id":"RANK-03","category":"ranking","scenario":"Deterministic tie","expected":"Use stable product identifier tie-break."},
+  {"id":"AGENT-01","category":"workflow","scenario":"Mandatory budget is omitted","expected":"Ask a targeted budget clarification before calling tools."},
+  {"id":"AGENT-02","category":"workflow","scenario":"Top five candidates become invalid at final verification","expected":"Continue through lower-ranked candidates and recommend a remaining valid product."},
+  {"id":"TOOL-05","category":"dynamic-tools","scenario":"Stock tool uses only synonyms","expected":"Resolve lookup_stock with SKU, market code, and units needed."},
+  {"id":"TOOL-06","category":"dynamic-tools","scenario":"Model receives a function result","expected":"Return function_call_output with the matching call_id and continue to a grounded answer."},
+  {"id":"LIVE-01","category":"integration","scenario":"Live OpenAI end-to-end workflow","expected":"Parse, call runtime tools, validate, reverify, compare, and return a grounded valid recommendation."}
 ]

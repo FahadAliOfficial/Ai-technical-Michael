@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from ai_shopping_agent.evaluation.metrics import score_gates
+from ai_shopping_agent.evaluation.metrics import GATE_FILES, score_gates
 
 
 def test_catalog_contains_at_least_30_products() -> None:
@@ -31,4 +31,14 @@ def test_quality_gates_cannot_pass_with_zero_discovered_tests() -> None:
 def test_quality_gates_pass_with_clean_test_run_and_deliverables() -> None:
     result = score_gates(test_failures=0, test_total=1)
     assert result["score"] == 5
+
+
+def test_targeted_gate_failure_reduces_quality_score() -> None:
+    targeted = {
+        name: {"exit_code": 0, "passed": 1, "failed": 0, "errors": 0}
+        for name in GATE_FILES
+    }
+    targeted["dynamic_tools"] = {"exit_code": 1, "passed": 0, "failed": 1, "errors": 0}
+    result = score_gates(test_failures=0, test_total=1, gate_test_results=targeted)
+    assert result["score"] == 4
 

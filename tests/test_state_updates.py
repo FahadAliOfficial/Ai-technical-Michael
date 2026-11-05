@@ -21,3 +21,12 @@ def test_update_clears_stale_decision_state(agent) -> None:
     if updated.recommendation.recommended:
         assert updated.recommendation.recommended.product.product_id != previous_recommendation
 
+
+def test_tool_calls_are_attributed_to_request_versions(agent) -> None:
+    state = agent.run(SAMPLE_REQUEST)
+    first_count = len(state.tool_calls)
+    assert all(record.request_version == 1 for record in state.tool_calls)
+    updated = agent.run("My maximum budget is $900 now", state)
+    assert all(record.request_version == 1 for record in updated.tool_calls[:first_count])
+    assert all(record.request_version == 2 for record in updated.tool_calls[first_count:])
+

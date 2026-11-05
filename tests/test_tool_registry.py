@@ -41,3 +41,25 @@ def test_registry_exposes_no_internal_handler(registry) -> None:
         assert "handler" not in tool
         assert tool["type"] == "function"
 
+
+def test_schema_validator_supports_nested_objects_and_constraints() -> None:
+    schema = {
+        "type": "object",
+        "properties": {
+            "request": {
+                "type": "object",
+                "properties": {
+                    "sku": {"type": "string", "pattern": "^LAPTOP_[0-9]{3}$"},
+                    "quantity": {"type": "integer", "minimum": 1, "maximum": 5},
+                },
+                "required": ["sku", "quantity"],
+                "additionalProperties": False,
+            }
+        },
+        "required": ["request"],
+        "additionalProperties": False,
+    }
+    validate_arguments(schema, {"request": {"sku": "LAPTOP_001", "quantity": 2}})
+    with pytest.raises(SchemaValidationError):
+        validate_arguments(schema, {"request": {"sku": "bad", "quantity": 0}})
+

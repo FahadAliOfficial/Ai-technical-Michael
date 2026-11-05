@@ -43,3 +43,35 @@ def test_audit_log_records_decisions(agent) -> None:
     assert {"requirements_parsed", "search_completed", "product_rejected", "tool_call", "recommendation_created"} <= events
     assert all(event["run_id"] == state.run_id for event in agent.logger.events)
 
+
+def test_missing_mandatory_requirement_asks_targeted_clarification(agent) -> None:
+    state = agent.run("I need a laptop with at least 32GB RAM and 1TB SSD storage")
+    assert state.recommendation.status == "clarification"
+    assert "budget" in (state.recommendation.clarification_question or "")
+    assert not state.tool_calls
+
+
+def test_final_verification_continues_past_invalidated_top_five(agent, environment) -> None:
+    changed = {
+        "LAPTOP_001": 1099,
+        "LAPTOP_002": 1149,
+        "LAPTOP_026": 1125,
+        "LAPTOP_015": 1025,
+        "LAPTOP_017": 925,
+    }
+    for product_id, price in changed.items():
+        environment.queue_prices(product_id, [price, price, 1300])
+    state = agent.run(SAMPLE_REQUEST)
+    assert state.recommendation.status == "success"
+    assert state.recommendation.recommended.product.product_id not in changed
+    assert state.pending_checks == []
+
+
+def test_response_exposes_constraints_scores_and_comparison(agent) -> None:
+    state = agent.run(SAMPLE_REQUEST)
+    result = state.recommendation
+    assert len(result.constraint_checks) == 4
+    assert result.recommended.score_breakdown
+    assert result.comparison_summary
+    assert "Alternatives:" in result.message
+

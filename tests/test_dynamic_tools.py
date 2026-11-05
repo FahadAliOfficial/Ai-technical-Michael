@@ -91,3 +91,29 @@ def test_dynamic_tool_schema_is_presented_to_model(settings, registry, environme
     assert spy.seen_tools
     assert all("parameters" in tool for tools in spy.seen_tools for tool in tools)
 
+
+def test_adapts_to_synonym_only_stock_schema(settings, registry, environment) -> None:
+    registry.remove("check_availability")
+    registry.register(
+        ToolDefinition(
+            name="lookup_stock",
+            description="Find current product stock by SKU, market code, and units needed.",
+            handler="availability",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "sku": {"type": "string", "description": "Product SKU."},
+                    "market_code": {"type": "string", "description": "Market or region code."},
+                    "units_needed": {"type": "integer", "description": "Units or quantity needed."},
+                },
+                "required": ["sku", "market_code", "units_needed"],
+                "additionalProperties": False,
+            },
+        )
+    )
+    state = make_agent(settings, registry, environment).run(SAMPLE_REQUEST)
+    assert state.recommendation.status == "success"
+    calls = [record for record in state.tool_calls if record.tool_name == "lookup_stock"]
+    assert calls
+    assert set(calls[0].arguments) == {"sku", "market_code", "units_needed"}
+

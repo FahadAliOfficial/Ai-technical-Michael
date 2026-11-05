@@ -39,3 +39,11 @@ def test_review_failure_does_not_override_hard_validation(agent, environment) ->
     assert state.recommendation.status == "success"
     assert state.recommendation.limitations
 
+
+def test_non_retryable_tool_error_is_attempted_once(agent, environment) -> None:
+    environment.queue_failure("search_products", "invalid request", count=3)
+    state = agent.run(SAMPLE_REQUEST)
+    attempts = [record for record in state.tool_calls if record.tool_name == "search_products"]
+    assert state.recommendation.status == "error"
+    assert len(attempts) == 1
+
