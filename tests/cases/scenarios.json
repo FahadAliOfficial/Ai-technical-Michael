@@ -43,5 +43,10 @@
   {"id":"AGENT-02","category":"workflow","scenario":"Top five candidates become invalid at final verification","expected":"Continue through lower-ranked candidates and recommend a remaining valid product."},
   {"id":"TOOL-05","category":"dynamic-tools","scenario":"Stock tool uses only synonyms","expected":"Resolve lookup_stock with SKU, market code, and units needed."},
   {"id":"TOOL-06","category":"dynamic-tools","scenario":"Model receives a function result","expected":"Return function_call_output with the matching call_id and continue to a grounded answer."},
-  {"id":"LIVE-01","category":"integration","scenario":"Live OpenAI end-to-end workflow","expected":"Parse, call runtime tools, validate, reverify, compare, and return a grounded valid recommendation."}
+  {"id":"LIVE-01","category":"integration","scenario":"Live OpenAI end-to-end workflow","expected":"Parse, call runtime tools, validate, reverify, compare, and return a grounded valid recommendation."},
+  {"id":"LIVE-02","category":"integration","scenario":"Live OpenAI budget follow-up","expected":"Change only the budget while preserving prior mandatory requirements."},
+  {"id":"TOOL-07","category":"dynamic-tools","scenario":"Inventory tool uses a nested request object","expected":"Recursively bind and normalize SKU, region, and quantity."},
+  {"id":"TOOL-08","category":"schema-validation","scenario":"Boolean supplied for an integer field","expected":"Reject the value because JSON booleans are not integers."},
+  {"id":"AGENT-03","category":"grounding","scenario":"Model comparison contains an unsupported claim","expected":"Ignore untrusted prose and render the comparison from verified tool evidence."},
+  {"id":"EVAL-01","category":"evaluation","scenario":"Branch coverage falls below 85 percent","expected":"Fail the tests-and-documentation quality gate."}
 ]

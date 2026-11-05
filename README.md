@@ -11,7 +11,7 @@ A reliable single-agent shopping system that separates language understanding fr
 - Hard constraints are enforced by Python, never by model judgment.
 - Typed state tracks request versions, candidates, rejection reasons, pending checks, errors, tool calls, and results.
 - Price and availability are queried again before the final decision.
-- Forty-five documented scenarios, 67 offline tests, and two opt-in live OpenAI tests cover happy paths, adversarial data, schema changes, failures, and the real API boundary.
+- Fifty documented scenarios, 81 offline tests, and three opt-in live OpenAI tests cover happy paths, adversarial data, nested schema changes, failures, state updates, and the real API boundary.
 
 ## Requirements
 
@@ -81,7 +81,7 @@ $env:PYTHONPATH = "src"
 python -m ai_shopping_agent.evaluation.runner
 ```
 
-The evaluation command writes `evidence/evaluation-results.json` and exits unsuccessfully unless all tests and all five behavior-specific quality gates pass. `--live` also runs paid OpenAI integration tests using the key from `.env`.
+The evaluation command writes `evidence/evaluation-results.json` and exits unsuccessfully unless all tests, at least 85% branch-aware coverage, and all five behavior-specific quality gates pass. `--live` also runs paid OpenAI integration tests using the key from `.env`.
 
 ## How the agent works
 
@@ -104,7 +104,7 @@ src/ai_shopping_agent/       agent, models, parsing, validation, ranking
 src/ai_shopping_agent/tools/ runtime schemas, adapters, executor, mock tools
 src/ai_shopping_agent/evaluation/ five-gate evaluation runner
 data/                        35-product catalog, inventory, reviews, tools
-tests/                       automated tests and 40 expected scenarios
+tests/                       automated tests and 50 expected scenarios
 docs/                        architecture, decisions, limitations, defense guide
 evidence/                    committed sample log and evaluation result
 ```

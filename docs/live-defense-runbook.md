@@ -49,6 +49,7 @@ Confirm `request_version == 2`, the run ID is stable, stale decision state was i
 python -m pytest -vv
 python -m pytest tests/test_dynamic_tools.py -vv
 python -m pytest tests/test_error_recovery.py -vv
+python -m pytest -m "not live" --cov=ai_shopping_agent --cov-branch --cov-report=term --cov-fail-under=85
 $env:PYTHONPATH = "src"
 python -m ai_shopping_agent.evaluation.runner
 python -m ai_shopping_agent.evaluation.runner --live

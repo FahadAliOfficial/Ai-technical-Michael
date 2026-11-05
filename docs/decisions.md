@@ -10,6 +10,8 @@
 
 The final comparison uses a real stateless Responses continuation loop. Tool outputs are returned with their `call_id`; the loop has a maximum-step guard and cannot change the deterministic valid-candidate set.
 
+The model's final narrative is retained only as execution evidence. Customer-facing comparison text is rendered from the validated ranking and comparison tool payload, preventing unsupported model claims.
+
 ## ADR-002: Single agent
 
 **Decision:** Use one shopping agent with normal Python components.
@@ -45,4 +47,10 @@ The final comparison uses a real stateless Responses continuation loop. Tool out
 **Decision:** Do not call search until category, maximum budget, minimum RAM, minimum storage, and storage type are known.
 
 **Reason:** An absent mandatory value is a customer clarification need, not a tool-compatibility failure.
+
+## ADR-008: Measured quality gates
+
+**Decision:** Require targeted behavioral tests for every quality gate and at least 85% branch-aware coverage for the full offline suite.
+
+**Reason:** File presence and a generic green test run do not prove that each assessment capability works.
 

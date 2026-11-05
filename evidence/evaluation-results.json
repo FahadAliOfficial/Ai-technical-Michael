@@ -1,28 +1,32 @@
 {
-  "generated_at": "2026-11-05T08:06:38.074523+00:00",
+  "generated_at": "2026-11-05T08:34:07.147350+00:00",
   "tests": {
-    "passed": 67,
+    "passed": 81,
     "failed": 0,
     "errors": 0,
     "skipped": 0,
-    "deselected": 2,
-    "total": 67,
+    "deselected": 3,
+    "total": 81,
     "success_rate_percent": 100.0,
     "exit_code": 0,
+    "coverage_percent": 88,
     "output": null,
-    "command": "C:\\Users\\Eight\\AppData\\Local\\Programs\\Python\\Python311\\python.exe -m pytest -o addopts= -q -m not live"
+    "command": "C:\\Users\\Eight\\AppData\\Local\\Programs\\Python\\Python311\\python.exe -m pytest -o addopts= -q -m not live --cov=ai_shopping_agent --cov-branch --cov-report=term --cov-fail-under=85",
+    "duration_seconds": 3.217
   },
   "live_openai_tests": {
-    "passed": 2,
+    "passed": 3,
     "failed": 0,
     "errors": 0,
     "skipped": 0,
     "deselected": 0,
-    "total": 2,
+    "total": 3,
     "success_rate_percent": 100.0,
     "exit_code": 0,
+    "coverage_percent": null,
     "output": null,
-    "command": "C:\\Users\\Eight\\AppData\\Local\\Programs\\Python\\Python311\\python.exe -m pytest -o addopts= -q tests/test_live_openai.py"
+    "command": "C:\\Users\\Eight\\AppData\\Local\\Programs\\Python\\Python311\\python.exe -m pytest -o addopts= -q tests/test_live_openai.py",
+    "duration_seconds": 27.595
   },
   "quality": {
     "score": 5,
@@ -32,85 +36,96 @@
         "passed": true,
         "missing_files": [],
         "targeted_tests": {
-          "passed": 26,
+          "passed": 28,
           "failed": 0,
           "errors": 0,
           "skipped": 0,
           "deselected": 0,
-          "total": 26,
+          "total": 28,
           "success_rate_percent": 100.0,
           "exit_code": 0,
+          "coverage_percent": null,
           "output": null,
-          "command": "C:\\Users\\Eight\\AppData\\Local\\Programs\\Python\\Python311\\python.exe -m pytest -o addopts= -q -m not live tests/test_parser.py tests/test_state_updates.py tests/test_agent_workflow.py"
+          "command": "C:\\Users\\Eight\\AppData\\Local\\Programs\\Python\\Python311\\python.exe -m pytest -o addopts= -q -m not live tests/test_parser.py tests/test_state_updates.py tests/test_agent_workflow.py",
+          "duration_seconds": 1.809
         }
       },
       "dynamic_tools": {
         "passed": true,
         "missing_files": [],
         "targeted_tests": {
-          "passed": 11,
+          "passed": 14,
           "failed": 0,
           "errors": 0,
           "skipped": 0,
           "deselected": 0,
-          "total": 11,
+          "total": 14,
           "success_rate_percent": 100.0,
           "exit_code": 0,
+          "coverage_percent": null,
           "output": null,
-          "command": "C:\\Users\\Eight\\AppData\\Local\\Programs\\Python\\Python311\\python.exe -m pytest -o addopts= -q -m not live tests/test_tool_registry.py tests/test_dynamic_tools.py tests/test_model_client.py"
+          "command": "C:\\Users\\Eight\\AppData\\Local\\Programs\\Python\\Python311\\python.exe -m pytest -o addopts= -q -m not live tests/test_tool_registry.py tests/test_dynamic_tools.py tests/test_model_client.py",
+          "duration_seconds": 1.661
         }
       },
       "validation_and_ranking": {
         "passed": true,
         "missing_files": [],
         "targeted_tests": {
-          "passed": 27,
+          "passed": 30,
           "failed": 0,
           "errors": 0,
           "skipped": 0,
           "deselected": 0,
-          "total": 27,
+          "total": 30,
           "success_rate_percent": 100.0,
           "exit_code": 0,
+          "coverage_percent": null,
           "output": null,
-          "command": "C:\\Users\\Eight\\AppData\\Local\\Programs\\Python\\Python311\\python.exe -m pytest -o addopts= -q -m not live tests/test_validation.py tests/test_ranking.py tests/test_agent_workflow.py"
+          "command": "C:\\Users\\Eight\\AppData\\Local\\Programs\\Python\\Python311\\python.exe -m pytest -o addopts= -q -m not live tests/test_validation.py tests/test_ranking.py tests/test_agent_workflow.py",
+          "duration_seconds": 1.842
         }
       },
       "resilience_and_auditability": {
         "passed": true,
         "missing_files": [],
         "targeted_tests": {
-          "passed": 15,
+          "passed": 18,
           "failed": 0,
           "errors": 0,
           "skipped": 0,
           "deselected": 0,
-          "total": 15,
+          "total": 18,
           "success_rate_percent": 100.0,
           "exit_code": 0,
+          "coverage_percent": null,
           "output": null,
-          "command": "C:\\Users\\Eight\\AppData\\Local\\Programs\\Python\\Python311\\python.exe -m pytest -o addopts= -q -m not live tests/test_error_recovery.py tests/test_agent_workflow.py"
+          "command": "C:\\Users\\Eight\\AppData\\Local\\Programs\\Python\\Python311\\python.exe -m pytest -o addopts= -q -m not live tests/test_error_recovery.py tests/test_agent_workflow.py",
+          "duration_seconds": 2.437
         }
       },
       "tests_and_documentation": {
         "passed": true,
         "missing_files": [],
         "targeted_tests": {
-          "passed": 6,
+          "passed": 8,
           "failed": 0,
           "errors": 0,
           "skipped": 0,
           "deselected": 0,
-          "total": 6,
+          "total": 8,
           "success_rate_percent": 100.0,
           "exit_code": 0,
+          "coverage_percent": null,
           "output": null,
-          "command": "C:\\Users\\Eight\\AppData\\Local\\Programs\\Python\\Python311\\python.exe -m pytest -o addopts= -q -m not live tests/test_evaluation.py"
+          "command": "C:\\Users\\Eight\\AppData\\Local\\Programs\\Python\\Python311\\python.exe -m pytest -o addopts= -q -m not live tests/test_evaluation.py",
+          "duration_seconds": 2.086
         }
       }
     },
-    "scenario_count": 45,
-    "catalog_count": 35
+    "scenario_count": 50,
+    "catalog_count": 35,
+    "coverage_percent": 88
   },
   "failure_analysis": []
 }

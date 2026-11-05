@@ -70,11 +70,11 @@ inventory_lookup(product_code, region, requested_quantity)
 
 can replace `check_availability(product_id)` without changing agent orchestration.
 
-All calls are locally checked for required arguments, nullable unions, nested objects, primitive types, arrays, enumerations, numeric limits, string patterns, collection sizes, and unexpected properties before execution.
+All calls are locally checked for required arguments, nullable unions, nested objects, primitive types, arrays, enumerations, numeric limits, string patterns, collection sizes, and unexpected properties before execution. Nested request envelopes are recursively bound and normalized, so schema evolution does not require flat parameters.
 
 ## Responses continuation loop
 
-The model receives only comparison tools and already validated candidate IDs. For every `function_call`, the application validates arguments, executes through `ToolExecutor`, and appends a `function_call_output` with the matching `call_id`. The loop stops on a final message or a six-step safety bound. Deterministic validation remains authoritative, so the model cannot introduce a new candidate or waive a failed hard constraint.
+The model receives only the discovered comparison tool and already validated candidate IDs. For every `function_call`, the application validates arguments, executes through `ToolExecutor`, and appends a `function_call_output` with the matching `call_id`. The loop stops on a final message or a six-step safety bound. User-facing comparison evidence is rendered deterministically from validated rank data and returned tool payloads; untrusted model prose cannot introduce a product or unsupported specification.
 
 ## Failure policy
 

@@ -8,6 +8,7 @@ from ai_shopping_agent.agent import ShoppingAgent
 from ai_shopping_agent.audit import AuditLogger
 from ai_shopping_agent.config import Settings
 from ai_shopping_agent.model_client import OpenAIModelClient
+from ai_shopping_agent.models import Requirements
 
 
 @pytest.mark.live
@@ -85,3 +86,34 @@ def test_live_openai_end_to_end_agent_workflow() -> None:
     assert state.recommendation.comparison_summary
     assert state.model_metrics.get("total_tokens", 0) > 0
     assert any(event["event"] == "model_tool_loop_completed" for event in logger.events)
+
+
+@pytest.mark.live
+def test_live_openai_follow_up_changes_only_the_budget() -> None:
+    if os.getenv("RUN_LIVE_OPENAI_TESTS") != "1":
+        pytest.skip("Set RUN_LIVE_OPENAI_TESTS=1 to run paid OpenAI integration tests")
+    settings = Settings.from_env()
+    if not settings.api_key:
+        pytest.skip("OPENAI_API_KEY is not configured")
+    client = OpenAIModelClient(
+        settings.api_key,
+        settings.model,
+        settings.timeout_seconds,
+        settings.max_retries,
+    )
+    previous = Requirements(
+        category="laptop",
+        max_price=1200,
+        min_ram_gb=32,
+        min_storage_gb=1024,
+        storage_type="SSD",
+        preferred_battery_hours=10,
+        preferred_max_weight_kg=1.6,
+        purpose="software development",
+    )
+    updated = client.parse_requirements("My maximum budget is now $900.", previous)
+    assert updated.max_price == 900
+    assert updated.category == previous.category
+    assert updated.min_ram_gb == previous.min_ram_gb
+    assert updated.min_storage_gb == previous.min_storage_gb
+    assert updated.storage_type == previous.storage_type

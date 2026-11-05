@@ -3,7 +3,7 @@
 ## Current limitations
 
 1. The deterministic parser covers the assessment's laptop language, common synonyms, and follow-up budgets; arbitrary multilingual or highly implicit requests require OpenAI mode.
-2. The local schema validator covers the assessment schemas and common nested constraints, but is not a complete implementation of every JSON Schema draft keyword.
+2. The local schema validator and recursive binder cover the assessment schemas and common nested constraints, but do not implement every JSON Schema draft keyword.
 3. Inventory uses one local region and does not model reservations or fulfillment time.
 4. Preference weights are documented constants rather than learned from user feedback.
 5. The system handles one product category in the supplied catalog, although its models are category-neutral.
