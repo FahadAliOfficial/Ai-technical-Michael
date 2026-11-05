@@ -28,8 +28,22 @@ def test_quality_gates_cannot_pass_with_zero_discovered_tests() -> None:
     assert result["score"] == 0
 
 
-def test_quality_gates_pass_with_clean_test_run_and_deliverables() -> None:
+def test_quality_gates_require_targeted_behavioral_results() -> None:
     result = score_gates(test_failures=0, test_total=1)
+    assert result["score"] == 0
+
+
+def test_quality_gates_pass_with_clean_targeted_tests_and_deliverables() -> None:
+    targeted = {
+        name: {"exit_code": 0, "passed": 1, "failed": 0, "errors": 0}
+        for name in GATE_FILES
+    }
+    result = score_gates(
+        test_failures=0,
+        test_total=1,
+        gate_test_results=targeted,
+        coverage_percent=90,
+    )
     assert result["score"] == 5
 
 
@@ -39,6 +53,25 @@ def test_targeted_gate_failure_reduces_quality_score() -> None:
         for name in GATE_FILES
     }
     targeted["dynamic_tools"] = {"exit_code": 1, "passed": 0, "failed": 1, "errors": 0}
-    result = score_gates(test_failures=0, test_total=1, gate_test_results=targeted)
+    result = score_gates(
+        test_failures=0,
+        test_total=1,
+        gate_test_results=targeted,
+        coverage_percent=90,
+    )
+    assert result["score"] == 4
+
+
+def test_quality_score_rejects_insufficient_coverage() -> None:
+    targeted = {
+        name: {"exit_code": 0, "passed": 1, "failed": 0, "errors": 0}
+        for name in GATE_FILES
+    }
+    result = score_gates(
+        test_failures=0,
+        test_total=1,
+        gate_test_results=targeted,
+        coverage_percent=84,
+    )
     assert result["score"] == 4
 

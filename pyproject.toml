@@ -35,3 +35,15 @@ markers = [
   "live: opt-in tests that call the configured OpenAI API",
 ]
 
+[tool.coverage.run]
+branch = true
+source = ["ai_shopping_agent"]
+omit = [
+  "*/__main__.py",
+  "*/tools/protocol.py",
+]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+

@@ -70,6 +70,7 @@ def score_gates(
     test_total: int,
     root: Path = Path("."),
     gate_test_results: dict[str, dict[str, Any]] | None = None,
+    coverage_percent: float | None = None,
 ) -> dict[str, Any]:
     scenario_count = 0
     catalog_count = 0
@@ -84,8 +85,8 @@ def score_gates(
         missing = [path for path in files if not (root / path).is_file()]
         targeted = (gate_test_results or {}).get(name)
         targeted_passed = (
-            targeted is None
-            or (
+            targeted is not None
+            and (
                 targeted.get("exit_code") == 0
                 and targeted.get("passed", 0) > 0
                 and targeted.get("failed", 0) == 0
@@ -94,7 +95,13 @@ def score_gates(
         )
         passed = test_total > 0 and test_failures == 0 and not missing and targeted_passed
         if name == "tests_and_documentation":
-            passed = passed and scenario_count >= 30 and catalog_count >= 30
+            passed = (
+                passed
+                and scenario_count >= 30
+                and catalog_count >= 30
+                and coverage_percent is not None
+                and coverage_percent >= 85
+            )
         gates[name] = {
             "passed": passed,
             "missing_files": missing,
@@ -106,5 +113,6 @@ def score_gates(
         "gates": gates,
         "scenario_count": scenario_count,
         "catalog_count": catalog_count,
+        "coverage_percent": coverage_percent,
     }
 
