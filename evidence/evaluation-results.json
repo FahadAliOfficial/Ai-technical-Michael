@@ -1,0 +1,41 @@
+{
+  "generated_at": "2026-11-05T07:38:23.983487+00:00",
+  "command": "C:\\Users\\Eight\\AppData\\Local\\Programs\\Python\\Python311\\python.exe -m pytest -o addopts= -q",
+  "tests": {
+    "passed": 58,
+    "failed": 0,
+    "errors": 0,
+    "total": 58,
+    "success_rate_percent": 100.0,
+    "exit_code": 0
+  },
+  "quality": {
+    "score": 5,
+    "maximum_score": 5,
+    "gates": {
+      "requirements_and_state": {
+        "passed": true,
+        "missing_files": []
+      },
+      "dynamic_tools": {
+        "passed": true,
+        "missing_files": []
+      },
+      "validation_and_ranking": {
+        "passed": true,
+        "missing_files": []
+      },
+      "resilience_and_auditability": {
+        "passed": true,
+        "missing_files": []
+      },
+      "tests_and_documentation": {
+        "passed": true,
+        "missing_files": []
+      }
+    },
+    "scenario_count": 40,
+    "catalog_count": 35
+  },
+  "failure_analysis": []
+}
