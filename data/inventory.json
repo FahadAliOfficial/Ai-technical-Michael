@@ -1,0 +1,20 @@
+{
+  "LAPTOP_001":{"quantity":7,"region":"US"}, "LAPTOP_002":{"quantity":5,"region":"US"},
+  "LAPTOP_003":{"quantity":3,"region":"US"}, "LAPTOP_004":{"quantity":4,"region":"US"},
+  "LAPTOP_005":{"quantity":8,"region":"US"}, "LAPTOP_006":{"quantity":9,"region":"US"},
+  "LAPTOP_007":{"quantity":2,"region":"US"}, "LAPTOP_008":{"quantity":0,"region":"US"},
+  "LAPTOP_009":{"quantity":3,"region":"US"}, "LAPTOP_010":{"quantity":1,"region":"US"},
+  "LAPTOP_011":{"quantity":6,"region":"US"}, "LAPTOP_012":{"quantity":4,"region":"US"},
+  "LAPTOP_013":{"quantity":2,"region":"US"}, "LAPTOP_014":{"quantity":5,"region":"US"},
+  "LAPTOP_015":{"quantity":6,"region":"US"}, "LAPTOP_016":{"quantity":4,"region":"US"},
+  "LAPTOP_017":{"quantity":8,"region":"US"}, "LAPTOP_018":{"quantity":10,"region":"US"},
+  "LAPTOP_019":{"quantity":2,"region":"US"}, "LAPTOP_020":{"quantity":9,"region":"US"},
+  "LAPTOP_021":{"quantity":2,"region":"US"}, "LAPTOP_022":{"quantity":3,"region":"US"},
+  "LAPTOP_023":{"quantity":4,"region":"US"}, "LAPTOP_024":{"quantity":2,"region":"US"},
+  "LAPTOP_025":{"quantity":2,"region":"US"}, "LAPTOP_026":{"quantity":8,"region":"US"},
+  "LAPTOP_027":{"quantity":2,"region":"US"}, "LAPTOP_028":{"quantity":1,"region":"US"},
+  "LAPTOP_029":{"quantity":2,"region":"US"}, "LAPTOP_030":{"quantity":0,"region":"US"},
+  "LAPTOP_031":{"quantity":7,"region":"US"}, "LAPTOP_032":{"quantity":2,"region":"US"},
+  "LAPTOP_033":{"quantity":5,"region":"US"}, "LAPTOP_034":{"quantity":5,"region":"US"}
+}
+

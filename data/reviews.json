@@ -1,0 +1,20 @@
+{
+  "LAPTOP_001":{"average_rating":4.7,"review_count":318,"highlights":["quiet keyboard","strong battery","good Linux support"]},
+  "LAPTOP_002":{"average_rating":4.5,"review_count":205,"highlights":["very light","all-day battery"]},
+  "LAPTOP_003":{"average_rating":4.8,"review_count":174,"highlights":["fast builds","heavy charger"]},
+  "LAPTOP_012":{"average_rating":4.4,"review_count":91,"highlights":["reliable","good display"]},
+  "LAPTOP_013":{"average_rating":4.3,"review_count":88,"highlights":["excellent battery","heavier than expected"]},
+  "LAPTOP_014":{"average_rating":4.5,"review_count":119,"highlights":["extremely portable","average battery"]},
+  "LAPTOP_015":{"average_rating":4.2,"review_count":143,"highlights":["Linux compatibility","good value"]},
+  "LAPTOP_016":{"average_rating":4.6,"review_count":67,"highlights":["large memory","warm under load"]},
+  "LAPTOP_017":{"average_rating":4.1,"review_count":54,"highlights":["good value"]},
+  "LAPTOP_022":{"average_rating":3.9,"review_count":31,"highlights":["lightweight","short battery"]},
+  "LAPTOP_023":{"average_rating":4.6,"review_count":76,"highlights":["exceptional battery","heavy"]},
+  "LAPTOP_024":{"average_rating":3.8,"review_count":22,"highlights":["low price","worn battery"]},
+  "LAPTOP_026":{"average_rating":4.5,"review_count":131,"highlights":["security features","solid build"]},
+  "LAPTOP_028":{"average_rating":4.3,"review_count":12,"highlights":["portable"]},
+  "LAPTOP_029":{"average_rating":4.3,"review_count":19,"highlights":["long battery"]},
+  "LAPTOP_031":{"average_rating":4.4,"review_count":101,"highlights":["balanced"]},
+  "LAPTOP_032":{"average_rating":4.5,"review_count":46,"highlights":["large SSD","heavy"]},
+  "LAPTOP_033":{"average_rating":4.0,"review_count":39,"highlights":["meets expectations"]}
+}
